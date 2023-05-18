@@ -1,41 +1,44 @@
-const messageList = document.querySelector("ul");
-const messageForm = document.querySelector("#message");
-const nickForm = document.querySelector("#nick");
+const socket = io();
 
-const socket = new WebSocket(`ws://${window.location.host}`);
+const welcome = document.getElementById("welcome");
+const form = welcome.querySelector("form");
+const room = document.getElementById("room");
+const msgform = room.querySelector("form");
 
-function makeMessage(type, payload) {
-  const msg = { type, payload };
-  return JSON.stringify(msg);
-}
+room.hidden = true;
 
-socket.addEventListener("open", () => {
-  console.log("Connected to Server ✅");
-});
+let roomName;
 
-socket.addEventListener("message", (msg) => {
+function addMessage(msg) {
+  const ul = room.querySelector("ul");
   const li = document.createElement("li");
-  li.innerText = msg.data;
-  messageList.append(li);
-});
+  li.innerText = msg;
+  ul.appendChild(li);
+}
 
-socket.addEventListener("close", () => {
-  console.log("Disconnected from the Server ❌");
-});
+function showRoom() {
+  welcome.hidden = true;
+  room.hidden = false;
+  const h3 = room.querySelector("h3");
+  h3.innerText = `Room ${roomName}`;
+}
 
-function handleSubmit(event) {
+function handleRoomSubmit(event) {
   event.preventDefault();
-  const input = messageForm.querySelector("input");
-  socket.send(makeMessage("new_message", input.value));
+  const input = form.querySelector("input");
+  socket.emit("enter_room", input.value, showRoom);
+  roomName = input.value;
   input.value = "";
 }
 
-function handleNickSubmit(event) {
+function handleMsgSubmit(event) {
   event.preventDefault();
-  const input = nickForm.querySelector("input");
-  socket.send(makeMessage("nickname", input.value));
-  input.value = "";
+  console.log("msg submitted");
 }
 
-messageForm.addEventListener("submit", handleSubmit);
-nickForm.addEventListener("submit", handleNickSubmit);
+form.addEventListener("submit", handleRoomSubmit);
+msgform.addEventListener("submit", handleMsgSubmit);
+
+socket.on("welcome", () => {
+  addMessage("someone joined!!");
+});

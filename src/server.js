@@ -1,5 +1,6 @@
 import http from "http";
-import WebSocket from "ws";
+// import WebSocket from "ws";
+import SocketIO from "socket.io";
 import express from "express";
 
 const app = express();
@@ -10,33 +11,49 @@ app.use("/public", express.static(__dirname + "/public"));
 app.get("/", (_, res) => res.render("home")); // route handler - rendering "home.pug"
 app.get("/*", (_, res) => res.redirect("/"));
 
-const handleListen = () => console.log(`Listening on http://localhost:3000`);
-// app.listen(3000, handleListen);
+const httpserver = http.createServer(app);
+const io = SocketIO(httpserver);
 
-// 같은 서버에서 http, web socket 둘 다 작동 가능
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-const sockets = [];
-
-wss.on("connection", (socket) => {
-  sockets.push(socket);
-  socket["nickname"] = "Anonymous";
-  console.log("Connected to Browser ✅");
-  socket.on("close", () => console.log("Disconnected from the Browser ❌"));
-  socket.on("message", (msg) => {
-    const parsed = JSON.parse(msg);
-    switch (parsed.type) {
-      case "new_message":
-        sockets.forEach((aSocket) =>
-          aSocket.send(`${socket.nickname}: ${parsed.payload}`)
-        );
-        break;
-      case "nickname":
-        socket["nickname"] = parsed.payload;
-        break;
-    }
+io.on("connection", (socket) => {
+  socket.onAny((event) => {
+    console.log(`socket event:${event}`);
+  });
+  socket.on("enter_room", (roomName, done) => {
+    socket.join(roomName);
+    console.log(socket.rooms);
+    done();
+    socket.to(roomName).emit("welcome");
   });
 });
 
-server.listen(3000, handleListen);
+// using websocket
+/*
+    // 같은 서버에서 http, web socket 둘 다 작동 가능
+    const httpserver = http.createServer(app);
+    const wss = new WebSocket.Server({ httpserver });
+    
+    const sockets = [];
+    
+    wss.on("connection", (socket) => {
+        sockets.push(socket);
+        socket["nickname"] = "Anonymous";
+        console.log("Connected to Browser ✅");
+        socket.on("close", () => console.log("Disconnected from the Browser ❌"));
+        socket.on("message", (msg) => {
+            const parsed = JSON.parse(msg);
+            switch (parsed.type) {
+                case "new_message":
+                    sockets.forEach((aSocket) =>
+                    aSocket.send(`${socket.nickname}: ${parsed.payload}`)
+        );
+        break;
+        case "nickname":
+            socket["nickname"] = parsed.payload;
+            break;
+        }
+    });
+});
+*/
+
+const handleListen = () => console.log(`Listening on http://localhost:3000`);
+httpserver.listen(3000, handleListen);
