@@ -33,7 +33,12 @@ function handleRoomSubmit(event) {
 
 function handleMsgSubmit(event) {
   event.preventDefault();
-  console.log("msg submitted");
+  const input = msgform.querySelector("input");
+  const value = input.value;
+  socket.emit("new_message", value, roomName, () => {
+    addMessage(`You: ${value}`);
+  });
+  input.value = "";
 }
 
 form.addEventListener("submit", handleRoomSubmit);
@@ -42,3 +47,7 @@ msgform.addEventListener("submit", handleMsgSubmit);
 socket.on("welcome", () => {
   addMessage("someone joined!!");
 });
+socket.on("bye", () => {
+  addMessage("someone left!!");
+});
+socket.on("new_message", addMessage);
