@@ -3,7 +3,8 @@ const socket = io();
 const welcome = document.getElementById("welcome");
 const form = welcome.querySelector("form");
 const room = document.getElementById("room");
-const msgform = room.querySelector("form");
+const msgform = document.getElementById("msg");
+const nameform = document.getElementById("name");
 
 room.hidden = true;
 
@@ -41,13 +42,22 @@ function handleMsgSubmit(event) {
   input.value = "";
 }
 
+function handleNameSubmit(event) {
+  event.preventDefault();
+  const input = nameform.querySelector("input");
+  const value = input.value;
+  socket.emit("nickname", value);
+  input.value = "";
+}
+
 form.addEventListener("submit", handleRoomSubmit);
 msgform.addEventListener("submit", handleMsgSubmit);
+nameform.addEventListener("submit", handleNameSubmit);
 
-socket.on("welcome", () => {
-  addMessage("someone joined!!");
+socket.on("welcome", (nickname) => {
+  addMessage(`${nickname} joined!!`);
 });
-socket.on("bye", () => {
-  addMessage("someone left!!");
+socket.on("bye", (nickname) => {
+  addMessage(`${nickname} left!!`);
 });
 socket.on("new_message", addMessage);
