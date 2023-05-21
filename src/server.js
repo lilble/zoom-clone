@@ -14,20 +14,49 @@ app.get("/*", (_, res) => res.redirect("/"));
 const httpserver = http.createServer(app);
 const io = SocketIO(httpserver);
 
+function publicRooms() {
+  const {
+    sockets: {
+      adapter: { sids, rooms },
+    },
+  } = io;
+  const publicRooms = [];
+  rooms.forEach((_, key) => {
+    if (sids.get(key) === undefined) {
+      publicRooms.push(key);
+    }
+  });
+  console.log(rooms);
+  return publicRooms;
+}
+
+function countRoom(roomName) {
+  return io.sockets.adapter.rooms.get(roomName)?.size;
+}
+
 io.on("connection", (socket) => {
   socket["nickname"] = "Anonymous";
-  // socket.onAny((event) => {
-  //   console.log(`socket event:${event}`);
-  // });
+  socket.on("refresh", () => {
+    io.sockets.emit("room_change", publicRooms());
+  });
+  socket.onAny((event) => {
+    console.log(`socket event: ${event}`);
+    // console.log(io.sockets.adapter);
+  });
   socket.on("enter_room", (roomName, done) => {
     socket.join(roomName);
-    done();
-    socket.to(roomName).emit("welcome", socket.nickname);
+    const numPeople = countRoom(roomName);
+    done(numPeople);
+    socket.to(roomName).emit("welcome", socket.nickname, numPeople);
+    io.sockets.emit("room_change", publicRooms());
   });
   socket.on("disconnecting", () => {
     socket.rooms.forEach((room) =>
-      socket.to(room).emit("bye", socket.nickname)
+      socket.to(room).emit("bye", socket.nickname, countRoom(room) - 1)
     );
+  });
+  socket.on("disconnect", () => {
+    io.sockets.emit("room_change", publicRooms());
   });
   socket.on("new_message", (msg, roomName, done) => {
     socket.to(roomName).emit("new_message", `${socket.nickname}: ${msg}`);
