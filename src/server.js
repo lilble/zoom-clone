@@ -45,64 +45,20 @@ function countRoom(roomName) {
 }
 
 io.on("connection", (socket) => {
-  socket["nickname"] = "Anonymous";
-  socket.on("refresh", () => {
-    io.sockets.emit("room_change", publicRooms());
-  });
-  socket.onAny((event) => {
-    console.log(`socket event: ${event}`);
-    // console.log(io.sockets.adapter);
-  });
-  socket.on("enter_room", (roomName, done) => {
+  socket.on("join_room", (roomName) => {
     socket.join(roomName);
-    const numPeople = countRoom(roomName);
-    done(numPeople);
-    socket.to(roomName).emit("welcome", socket.nickname, numPeople);
-    io.sockets.emit("room_change", publicRooms());
+    socket.to(roomName).emit("welcome");
   });
-  socket.on("disconnecting", () => {
-    socket.rooms.forEach((room) =>
-      socket.to(room).emit("bye", socket.nickname, countRoom(room) - 1)
-    );
+  socket.on("offer", (offer, roomName) => {
+    socket.to(roomName).emit("offer", offer);
   });
-  socket.on("disconnect", () => {
-    io.sockets.emit("room_change", publicRooms());
+  socket.on("answer", (answer, roomName) => {
+    socket.to(roomName).emit("answer", answer);
   });
-  socket.on("new_message", (msg, roomName, done) => {
-    socket.to(roomName).emit("new_message", `${socket.nickname}: ${msg}`);
-    done();
+  socket.on("ice", (ice, roomName) => {
+    socket.to(roomName).emit("ice", ice);
   });
-  socket.on("nickname", (nickname) => (socket["nickname"] = nickname));
 });
-
-// using websocket
-/*
-    // 같은 서버에서 http, web socket 둘 다 작동 가능
-    const httpserver = http.createServer(app);
-    const wss = new WebSocket.Server({ httpserver });
-    
-    const sockets = [];
-    
-    wss.on("connection", (socket) => {
-        sockets.push(socket);
-        socket["nickname"] = "Anonymous";
-        console.log("Connected to Browser ✅");
-        socket.on("close", () => console.log("Disconnected from the Browser ❌"));
-        socket.on("message", (msg) => {
-            const parsed = JSON.parse(msg);
-            switch (parsed.type) {
-                case "new_message":
-                    sockets.forEach((aSocket) =>
-                    aSocket.send(`${socket.nickname}: ${parsed.payload}`)
-        );
-        break;
-        case "nickname":
-            socket["nickname"] = parsed.payload;
-            break;
-        }
-    });
-});
-*/
 
 const handleListen = () => console.log(`Listening on http://localhost:3000`);
 httpserver.listen(3000, handleListen);
